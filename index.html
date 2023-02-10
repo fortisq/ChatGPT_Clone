@@ -1,0 +1,55 @@
+// Create input field and submit button. Center them.
+var input = document.createElement('input');
+input.type = 'text';
+input.id = 'input';
+input.style.width = '100%';
+input.style.textAlign = 'center';
+document.body.appendChild(input);
+var submit = document.createElement('button');
+submit.innerHTML = 'Submit';
+submit.id = 'submit';
+submit.style.width = '100%';
+submit.style.textAlign = 'center';
+document.body.appendChild(submit);
+
+// Function for making the API call
+function makeApiCall(prompt, retryCount) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://api.openai.com/v1/engines/davinci/completions', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('Authorization', 'Bearer ' + 'sk-...');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4) {
+      var response = JSON.parse(xhr.responseText);
+      if (xhr.status == 200) {
+        var responseText = response.choices[0].text;
+        var responseDiv = document.createElement('div');
+        responseDiv.innerHTML = responseText;
+        document.body.insertBefore(responseDiv, document.getElementById('input'));
+      } else if (xhr.status == 429 && retryCount < 3) {
+        // Exponential backoff for handling rate limiting errors
+        setTimeout(function() {
+          makeApiCall(prompt, retryCount + 1);
+        }, 1000 * Math.pow(2, retryCount));
+      } else {
+        console.error('Error: ' + xhr.status + ' ' + xhr.responseText);
+      }
+    }
+  }
+  xhr.send(JSON.stringify({
+    'prompt': text,
+    'max_tokens': 100,
+    'temperature': 0.7,
+    'top_p': 0.9,
+    'n': 1,
+    'stream': false,
+    'logprobs': null,
+    'stop': ['\n']
+  }));
+}
+
+// Call the function when submit button is clicked
+submit.onclick = function() {
+  var text = input.value;
+  makeApiCall(text, 0);
+};
